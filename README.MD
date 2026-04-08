@@ -1,3 +1,16 @@
+# 💼 Data Analyst Portfolio (Financial & Fraud Analytics)
+
+## 🔥 Featured Project
+
+### 👉 Debt Collection Workflow and Legal Cost Automation
+
+A project focused on automating debt collection workflows, including legal processes and state duty calculations.
+
+✔ Automated legal cost calculations  
+✔ Reduced manual workload  
+✔ Improved decision-making speed  
+
+📂 View project: ./debt-collection-automation
 # Data Analyst Portfolio (Financial & Fraud Analytics)
 
 ## 👋 About Me
@@ -22,11 +35,6 @@ Strong background in SQL and Python with a focus on:
 ---
 
 ## 📊 Projects
-
-## 🔥 Featured Project
-
-👉 Debt Collection Workflow and Legal Cost Automation  
-Main project demonstrating financial workflow automation and legal cost calculation.
 
 ### 🔥 Fraud & Financial Analytics
 - **Bankruptcy Status Update and Validation System**  
