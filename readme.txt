@@ -1,24 +1,52 @@
 # Data Analyst Portfolio (Financial & Fraud Analytics)
 
-## About me
-Data Analyst with experience in banking (fraud detection, reporting, data quality).
+## 👋 About Me
+Data Analyst with hands-on experience in banking, specializing in fraud detection, financial data processing, and automation.
 
-## Skills
-- SQL (advanced)
+Strong background in SQL and Python with a focus on:
+- Transaction analysis
+- Data validation and reconciliation
+- Legal and debt collection workflows
+- Process automation
+
+---
+
+## 🛠 Tech Stack
+- SQL (advanced, complex queries, reporting)
 - Python (data processing, automation)
-- Fraud detection / financial analytics
-- Data validation & reconciliation
+- MS SQL Server, SSMS
+- Data parsing & transformation
+- Financial and legal domain knowledge
 
-## Projects
+---
 
-### Fraud Detection & Risk Analysis
-- Bankruptcy status monitoring system
-- Transaction anomaly detection (planned)
+## 📊 Projects
 
-### Data Quality & Automation
-- Database validation scripts
-- Data reconciliation tools
+### 🔥 Fraud & Financial Analytics
+- **Bankruptcy Status Update and Validation System**  
+- **Credit Bureau Data Cleanup and Contract Management**  
+- **Debt Recovery Target Identification System**
 
-### Reporting
-- Legal department analytics
-- Financial reporting pipelines
+### ⚖️ Legal & Reporting Systems
+- **Legal Department Performance Reporting System**  
+- **Debt Collection Workflow and Legal Cost Automation**  
+- **Indexation Reporting System**
+
+### ⚙️ Data Processing & Automation
+- **CRM and Website Database Migration**  
+- **Reference Data Parsing Tool (VKSP Directory)**  
+- **Address Data Parsing and Standardization Tool**  
+- **PDF Merging Automation Tool**
+
+---
+
+## 💡 Key Strengths
+- Understanding of real-world financial processes  
+- Ability to automate complex workflows  
+- Experience working with large datasets  
+- Bridging technical solutions with business needs  
+
+---
+
+## 📬 Contact
+Open to remote opportunities and freelance projects.
