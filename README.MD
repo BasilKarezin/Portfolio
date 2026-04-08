@@ -10,7 +10,7 @@ A project focused on automating debt collection workflows, including legal proce
 ✔ Reduced manual workload  
 ✔ Improved decision-making speed  
 
-📂 View project: ./debt-collection-automation
+📂 [View Project](./debt-collection-automation)
 # Data Analyst Portfolio (Financial & Fraud Analytics)
 
 ## 👋 About Me
