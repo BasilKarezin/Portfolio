@@ -36,10 +36,17 @@ Strong background in SQL and Python with a focus on:
 
 ## 📊 Projects
 
-### 🔥 Fraud & Financial Analytics
-- **Bankruptcy Status Update and Validation System**  
-- **Credit Bureau Data Cleanup and Contract Management**  
-- **Debt Recovery Target Identification System**
+🔥 Fraud & Financial Analytics
+
+Bankruptcy Status Monitoring System
+A Python-based data processing system designed to monitor, validate, and update bankruptcy statuses using external data sources.
+
+Automated search and matching using multiple identifiers (INN, full name, SNILS)
+Processing and parsing external JSON responses
+Matching and validating records against internal databases
+End-to-end data workflow from data retrieval to database updates
+Improved data accuracy and reduced risk of incorrect financial decisions
+Designed as a modular and extensible pipeline for data validation and enrichment.
 
 ### ⚖️ Legal & Reporting Systems
 - **Legal Department Performance Reporting System**  
