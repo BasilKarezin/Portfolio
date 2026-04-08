@@ -2,7 +2,7 @@
 📌 Description
 
 This project is a Python-based data solution designed to monitor, validate, and update bankruptcy statuses using external data sources.
-
+The system was designed to be modular and extensible, allowing for easy integration of additional data sources and validation rules.
 The system automates the process of identifying individuals and entities, retrieving relevant information, and ensuring that internal database records remain accurate and up-to-date.
 
 ⚙️ Key Features
