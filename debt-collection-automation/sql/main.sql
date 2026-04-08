@@ -1,0 +1,364 @@
+WITH count_doc AS ( -- Количество определений об отмене в кейсе
+    SELECT 
+        contract_id,
+        COUNT(contract_document_id) AS [Определений в кейсе], 
+        creation_date as [tech]
+    FROM contract_documents
+    WHERE document_type_id = ...
+    GROUP BY contract_id, creation_date
+), 
+stat_pushk AS ( -- Количество определений об отмене в кейсе
+    SELECT 
+        cd.contract_id,
+        COUNT(contract_document_id) AS [...]
+    FROM contract_documents cd
+    LEFT JOIN count_doc cod ON cd.contract_id = cod.contract_id
+    WHERE creation_by_id = ... AND cd.creation_date > cod.tech
+    GROUP BY cd.contract_id
+), 
+court_owner AS ( -- Владелец судебки
+    SELECT
+        contract_id,
+        full_name
+    FROM contract_etaps c
+    LEFT JOIN users u ON u.user_id = c.owner_id
+    WHERE contract_etap_section_id = ...
+), 
+GP AS ( -- Кейсы в работе у судебки и ГП
+    SELECT 
+        contract_id,
+        summa_k_vzyskaniyu,
+        court_code,
+        gosposhlina,
+        gosposhlina_dop
+    FROM contract_courts
+    WHERE contract_court_type = 'main'
+), 
+count_PP AS ( -- Количество ПП в кейсе
+    SELECT
+        contract_id,
+        COUNT(document_type_id) AS [Кол-во ПП]
+    FROM contract_documents
+    WHERE document_type_id = ...
+    GROUP BY contract_id
+), 
+court_sub AS ( -- Кейсы на досуживании
+    SELECT
+        contract_id
+    FROM contract_courts
+    WHERE contract_court_type = 'sub'
+    GROUP BY contract_id
+), 
+court_main AS ( -- Кейсы на просуживании
+    SELECT
+        contract_id
+    FROM contract_courts
+    WHERE contract_court_type = 'main'
+    GROUP BY contract_id
+), 
+CES AS ( -- Кейсы на переуступке
+    SELECT 
+        contract_id
+    FROM contract_assignment
+), 
+workinbank AS ( -- По комменту работает банк
+    SELECT
+        contract_id 
+    FROM contract_court_statuses c 
+    WHERE comment NOT LIKE '%...%' AND (comment LIKE '%....%' OR comment LIKE '%....%')
+), 
+dossier_court AS ( -- Досье для суда
+    SELECT 
+        contract_id,
+        COUNT(document_type_id) AS [Досье для суда]
+    FROM contract_documents
+    WHERE document_type_id = ...
+    GROUP BY contract_id
+), 
+absence_act AS ( -- Акт отсутствия документов
+    SELECT 
+        contract_id,
+        COUNT(document_type_id) AS [Акт отсутствия документов]
+    FROM contract_documents
+    WHERE document_type_id = ....
+    GROUP BY contract_id
+),
+-- Расчет суммы взыскания для ГП
+vzyskanie_sum AS (
+    SELECT 
+        contract_id,
+        ostatok_dolga,
+        CASE 
+            WHEN ostatok_dolga <= 120000 THEN ostatok_dolga
+            WHEN ostatok_dolga <= 500000 THEN 100000
+            ELSE 490000
+        END AS summa_vzyskaniya
+    FROM contracts
+),
+-- Расчет госпошлины для всей суммы
+gp_full_sum AS (
+    SELECT
+        contract_id,
+        ostatok_dolga,
+        -- ГП по иску для всей суммы
+        CASE 
+            WHEN ostatok_dolga <= 100000 THEN 
+                CASE WHEN 4000 < 4000 THEN 4000 ELSE 4000 END
+            WHEN ostatok_dolga <= 300000 THEN 
+                4000 + (ostatok_dolga - 100000) * 0.03
+            WHEN ostatok_dolga <= 500000 THEN 
+                10000 + (ostatok_dolga - 300000) * 0.025
+            WHEN ostatok_dolga <= 1000000 THEN 
+                15000 + (ostatok_dolga - 500000) * 0.02
+            WHEN ostatok_dolga <= 3000000 THEN 
+                25000 + (ostatok_dolga - 1000000) * 0.01
+            ELSE 45000 + (ostatok_dolga - 3000000) * 0.007
+        END AS gosposhlina_full_isk,
+        -- ГП по приказу для всей суммы (50% от ГП по иску)
+        CEILING(
+            (CASE 
+                WHEN ostatok_dolga <= 100000 THEN 
+                    CASE WHEN 4000 < 4000 THEN 4000 ELSE 4000 END
+                WHEN ostatok_dolga <= 300000 THEN 
+                    4000 + (ostatok_dolga - 100000) * 0.03
+                WHEN ostatok_dolga <= 500000 THEN 
+                    10000 + (ostatok_dolga - 300000) * 0.025
+                WHEN ostatok_dolga <= 1000000 THEN 
+                    15000 + (ostatok_dolga - 500000) * 0.02
+                WHEN ostatok_dolga <= 3000000 THEN 
+                    25000 + (ostatok_dolga - 1000000) * 0.01
+                ELSE 45000 + (ostatok_dolga - 3000000) * 0.007
+            END) * 0.5 * 100
+        ) / 100 AS gosposhlina_full_prikaz
+    FROM contracts
+),
+-- Расчет госпошлины для части суммы
+gp_part_sum AS (
+    SELECT
+        contract_id,
+        summa_vzyskaniya,
+        -- ГП по иску для части суммы
+        CASE 
+            WHEN summa_vzyskaniya <= 100000 THEN 
+                CASE WHEN 4000 < 4000 THEN 4000 ELSE 4000 END
+            WHEN summa_vzyskaniya <= 300000 THEN 
+                4000 + (summa_vzyskaniya - 100000) * 0.03
+            WHEN summa_vzyskaniya <= 500000 THEN 
+                10000 + (summa_vzyskaniya - 300000) * 0.025
+            WHEN summa_vzyskaniya <= 1000000 THEN 
+                15000 + (summa_vzyskaniya - 500000) * 0.02
+            WHEN summa_vzyskaniya <= 3000000 THEN 
+                25000 + (summa_vzyskaniya - 1000000) * 0.01
+            ELSE 45000 + (summa_vzyskaniya - 3000000) * 0.007
+        END AS gosposhlina_part_isk,
+        -- ГП по приказу для части суммы (50% от ГП по иску)
+        CEILING(
+            (CASE 
+                WHEN summa_vzyskaniya <= 100000 THEN 
+                    CASE WHEN 4000 < 4000 THEN 4000 ELSE 4000 END
+                WHEN summa_vzyskaniya <= 300000 THEN 
+                    4000 + (summa_vzyskaniya - 100000) * 0.03
+                WHEN summa_vzyskaniya <= 500000 THEN 
+                    10000 + (summa_vzyskaniya - 300000) * 0.025
+                WHEN summa_vzyskaniya <= 1000000 THEN 
+                    15000 + (summa_vzyskaniya - 500000) * 0.02
+                WHEN summa_vzyskaniya <= 3000000 THEN 
+                    25000 + (summa_vzyskaniya - 1000000) * 0.01
+                ELSE 45000 + (summa_vzyskaniya - 3000000) * 0.007
+            END) * 0.5 * 100
+        ) / 100 AS gosposhlina_part_prikaz
+    FROM vzyskanie_sum
+),
+-- Расчет новых госпошлин
+gp_calc AS (
+    SELECT
+        c.contract_id,
+        -- Сумма ранее уплаченных госпошлин
+        ISNULL(GP.gosposhlina, 0) + ISNULL(GP.gosposhlina_dop, 0) AS gosposhlina_paid,
+        -- Для всей суммы
+        c.ostatok_dolga AS summa_full,
+        gpfs.gosposhlina_full_isk AS gosposhlina_full_isk,
+        gpfs.gosposhlina_full_prikaz AS gosposhlina_full_prikaz,
+        gpfs.gosposhlina_full_isk - (ISNULL(GP.gosposhlina, 0) + ISNULL(GP.gosposhlina_dop, 0)) AS gosposhlina_dop_full,
+        -- Для части суммы
+        vs.summa_vzyskaniya AS summa_part,
+        gpps.gosposhlina_part_isk AS gosposhlina_part_isk,
+        gpps.gosposhlina_part_prikaz AS gosposhlina_part_prikaz,
+        gpps.gosposhlina_part_isk - (ISNULL(GP.gosposhlina, 0) + ISNULL(GP.gosposhlina_dop, 0)) AS gosposhlina_dop_part
+    FROM contracts c
+    LEFT JOIN GP ON GP.contract_id = c.contract_id
+    LEFT JOIN vzyskanie_sum vs ON vs.contract_id = c.contract_id
+    LEFT JOIN gp_full_sum gpfs ON gpfs.contract_id = c.contract_id
+    LEFT JOIN gp_part_sum gpps ON gpps.contract_id = c.contract_id
+),
+bankrot AS (
+    SELECT 
+        c.contract_id,
+        pb.casenumber [Номер дела банкрот],
+        CASE 
+            WHEN pb.completion_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.completion_date >= c.initial_debt_date) THEN 'Процедура банкротства завершена'
+            WHEN pb.termination_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.termination_date >= c.initial_debt_date) THEN 'Процедура банкротства прекращена'
+			WHEN pb.action_id = 22 AND (c.initial_debt_date IS NULL OR pb.completion_date >= c.initial_debt_date) THEN 'Погашенный банкрот'
+            WHEN pb.ri_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.ri_date >= c.initial_debt_date) THEN 'Реализация имущества'
+            WHEN pb.rk_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.rk_date >= c.initial_debt_date) THEN 'Реструктуризация долгов'
+            WHEN be.bankrupt_event_type_id = 11 AND (c.initial_debt_date IS NULL OR be.event_date >= c.initial_debt_date) THEN 'Внесудебный банкрот завершен'
+            WHEN (pb.casenumber IS NOT NULL and pb.casenumber <> 'Vnesudebnoe') AND 
+                 (c.initial_debt_date IS NULL OR COALESCE(pb.ri_date, pb.rk_date, pb.completion_date, pb.termination_date) >= c.initial_debt_date) THEN 'Номер дела в реестре банкротства'
+        END [Банкротство],
+        CONVERT(VARCHAR, 
+            CASE 
+                WHEN pb.ri_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.ri_date >= c.initial_debt_date) THEN pb.ri_date
+                WHEN pb.rk_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.rk_date >= c.initial_debt_date) THEN pb.rk_date
+                WHEN pb.completion_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.completion_date >= c.initial_debt_date) THEN pb.completion_date
+                WHEN pb.termination_date IS NOT NULL AND (c.initial_debt_date IS NULL OR pb.termination_date >= c.initial_debt_date) THEN pb.termination_date
+                WHEN be.bankrupt_event_type_id = 11 AND (c.initial_debt_date IS NULL OR be.event_date >= c.initial_debt_date) THEN be.event_date  -- Дата для внесудебных
+                ELSE NULL
+            END, 104
+        ) [Дата банкротства],
+        be.bankrupt_event_type_id [Код мероприятия]
+    FROM contracts c
+    LEFT JOIN cont_pers_dtl dt ON c.contract_id = dt.contract_id
+    LEFT JOIN person_bankrupts pb ON dt.person_id = pb.person_id
+    LEFT JOIN bankrupt_events be ON pb.person_bankrupt_id = be.person_bankrupt_id
+    WHERE (pb.person_id IS NOT NULL 
+        OR be.bankrupt_event_type_id = ...)
+        -- Исключаем случаи банкротства до выдачи (только если дата выдачи известна)
+        AND (
+            c.initial_debt_date IS NULL  -- Если дата выдачи неизвестна - не исключаем
+            OR (
+                (pb.ri_date IS NULL OR pb.ri_date >= c.initial_debt_date)
+                AND (pb.rk_date IS NULL OR pb.rk_date >= c.initial_debt_date)
+                AND (pb.completion_date IS NULL OR pb.completion_date >= c.initial_debt_date)
+                AND (pb.termination_date IS NULL OR pb.termination_date >= c.initial_debt_date)
+                AND (be.event_date IS NULL OR be.event_date >= c.initial_debt_date)
+            )
+        )
+)
+
+SELECT
+    s.[contract_id],
+    co.full_name AS [Владелец судебки],
+    st.status_type_name AS [Статус суд],
+    CAST(s.creation_date AS date) AS 'Дата статуса суд',
+    cd.[Определений в кейсе],
+    sp.[...],
+    GP.summa_k_vzyskaniyu,
+    GP.court_code,
+    GP.gosposhlina,
+    GP.gosposhlina_dop,
+    c.ostatok_dolga,
+	b.[Номер дела банкрот], b.[Банкротство], b.[Дата банкротства],
+    
+    -- Сумма взыскания (вся и часть)
+
+    
+    
+    -- Итог по сумме
+    'вся сумма' AS [Итог по сумме - вся],
+
+    
+    -- ГП по иску (вся и часть)
+	    gpc.summa_full AS [Сумма взыскания - вся],
+    CAST(gpc.gosposhlina_full_isk AS DECIMAL(10,2)) AS [ГП по иску - вся],
+	 CAST(gpc.gosposhlina_full_prikaz AS DECIMAL(10,2)) AS [ГП по приказу - вся],
+	     CAST(gpc.gosposhlina_paid AS DECIMAL(10,2)) AS [gosposhlina_new - вся],
+	 CAST(gpc.gosposhlina_dop_full AS DECIMAL(10,2)) AS [gosposhlina_dop_new - вся],
+
+	    CASE 
+        WHEN vs.summa_vzyskaniya IN (100000, 490000) THEN 'часть суммы'
+        ELSE 'вся сумма'
+    END AS [Итог по сумме - часть],
+	gpc.summa_part AS [Сумма взыскания - часть],
+    CAST(gpc.gosposhlina_part_isk AS DECIMAL(10,2)) AS [ГП по иску - часть],
+    CAST(gpc.gosposhlina_part_prikaz AS DECIMAL(10,2)) AS [ГП по приказу - часть],
+    CAST(gpc.gosposhlina_paid AS DECIMAL(10,2)) AS [gosposhlina_new - часть],
+    CAST(gpc.gosposhlina_dop_part AS DECIMAL(10,2)) AS [gosposhlina_dop_new - часть],
+    -- ГП по приказу (вся и часть)
+   
+
+    
+    -- gosposhlina_new (вся и часть) - сумма уже уплаченных госпошлин
+
+
+   
+    -- gosposhlina_dop_new (вся и часть) - доплата
+
+
+    
+    
+    IIF(c.contract_id IN (SELECT contract_id FROM contract_grafik WHERE agreement_receipt_date IS NOT NULL), 1, 0) AS [Получение соглашение],
+    cp.[Кол-во ПП],
+    IIF(cs.contract_id IS NULL, '', 'Досуживание') AS [Досуживание],
+    IIF(cm.contract_id IS NULL, '', 'Просуживание') AS [Просуживание],
+    IIF(w.contract_id IS NOT NULL, 'по комментарию СУД работает банк', '') AS [Работает банк?],
+    
+    CASE 
+        WHEN ISNULL(dc.[Досье для суда], 0) > 0 THEN 'Досье для суда'
+        WHEN ISNULL(aa.[Акт отсутствия документов], 0) > 0 THEN 'Акт отсутствия документов'
+        ELSE ''
+    END AS [Документ],
+
+    CASE 
+        WHEN CES.contract_id IS NOT NULL THEN 'Переуступка'
+        WHEN IIF(c.ostatok_dolga < 1, 'Погашен', '') <> '' THEN 'Погашен'
+        WHEN b.contract_id IS NOT NULL THEN 'Банкрот'
+        ELSE ''
+    END AS [Итог],
+
+    -- Обновленные столбцы с SQL командами с использованием новых госпошлин (используем часть суммы)
+    'insert into contract_courts (contract_id, contract_court_type, summa_k_vzyskaniyu, gosposhlina, court_code) values(' 
+    + CAST(c.contract_id AS VARCHAR) + ', ''main'', ' 
+    + CAST(gpc.summa_part AS VARCHAR) + ', ' 
+    + CAST(CAST(gpc.gosposhlina_paid AS DECIMAL(10,2)) AS VARCHAR) 
+    + ', ''63MS0109'')' AS [Инсерт просуживание],
+
+    'insert into contract_courts (contract_id, contract_court_type, summa_k_vzyskaniyu, gosposhlina, court_code) values(' 
+    + CAST(c.contract_id AS VARCHAR) + ', ''sub'', ' 
+    + CAST(gpc.summa_part AS VARCHAR) + ', ' 
+    + CAST(CAST(gpc.gosposhlina_paid AS DECIMAL(10,2)) AS VARCHAR) 
+    + ', ''63MS0109'')' AS [Инсерт досуживание],
+
+    'update contract_courts set gosposhlina = ' 
+    + CAST(CAST(gpc.gosposhlina_paid AS DECIMAL(10,2)) AS VARCHAR) 
+    + ', gosposhlina_dop = ' 
+    + CASE WHEN gpc.gosposhlina_dop_part <= 0 THEN 'NULL' ELSE CAST(CAST(gpc.gosposhlina_dop_part AS DECIMAL(10,2)) AS VARCHAR) END
+    + ', court_code = ''' + ISNULL(GP.court_code, '63MS0109') + ''''
+    + ', summa_k_vzyskaniyu = ' + CAST(gpc.summa_part AS VARCHAR)
+    + ' where contract_id = ' + CAST(c.contract_id AS VARCHAR) + ' and contract_court_type = ''main''' AS [Апдейт просуживание],
+
+    'update contract_courts set gosposhlina = ' 
+    + CAST(CAST(gpc.gosposhlina_paid AS DECIMAL(10,2)) AS VARCHAR) 
+    + ', gosposhlina_dop = ' 
+    + CASE WHEN gpc.gosposhlina_dop_part <= 0 THEN 'NULL' ELSE CAST(CAST(gpc.gosposhlina_dop_part AS DECIMAL(10,2)) AS VARCHAR) END
+    + ', court_code = ''' + ISNULL(GP.court_code, '63MS0109') + ''''
+    + ', summa_k_vzyskaniyu = ' + CAST(gpc.summa_part AS VARCHAR)
+    + ' where contract_id = ' + CAST(c.contract_id AS VARCHAR) + ' and contract_court_type = ''sub''' AS [Апдейт досуживание],
+
+    'update [FINTRUST].[dbo].[gosposhlina] set gosposhlina_amount = ' 
+    + CASE WHEN gpc.gosposhlina_dop_part <= 0 THEN 'NULL' ELSE CAST(CAST(gpc.gosposhlina_dop_part AS DECIMAL(10,2)) AS VARCHAR) END
+    + ' where contract_id = ' + CAST(c.contract_id AS VARCHAR) + ' and id_bank is null' AS [Апдейт ГП], 
+    
+    c.overdue_date as 'дата выхода на просрочку'
+
+
+FROM contracts c
+LEFT JOIN GP ON GP.contract_id = c.contract_id
+LEFT JOIN count_doc cd ON cd.contract_id = c.contract_id
+LEFT JOIN court_owner co ON co.contract_id = c.contract_id
+LEFT JOIN workinbank w ON w.contract_id = c.contract_id
+LEFT JOIN count_PP cp ON cp.contract_id = c.contract_id
+LEFT JOIN CES ON CES.contract_id = c.contract_id
+LEFT JOIN court_sub cs ON cs.contract_id = c.contract_id
+LEFT JOIN court_main cm ON cm.contract_id = c.contract_id
+LEFT JOIN contract_court_statuses s ON c.contract_id = s.contract_id
+LEFT JOIN dossier_court dc ON dc.contract_id = c.contract_id
+LEFT JOIN absence_act aa ON aa.contract_id = c.contract_id
+LEFT JOIN stat_pushk sp ON sp.contract_id = c.contract_id
+LEFT JOIN vzyskanie_sum vs ON vs.contract_id = c.contract_id
+LEFT JOIN gp_calc gpc ON gpc.contract_id = c.contract_id
+JOIN status_types st ON s.court_status_id = st.status_type_id
+left join bankrot b on c.contract_id = b.contract_id
+WHERE 
+    s.creation_date = (SELECT MAX(creation_date) FROM contract_court_statuses WHERE c.contract_id = contract_id)
+    AND co.full_name = '...'
+;
