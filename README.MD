@@ -40,8 +40,7 @@ Strong background in SQL and Python with a focus on:
 
 Bankruptcy Status Monitoring System
 A Python-based data processing system designed to monitor, validate, and update bankruptcy statuses using external data sources.
-📂 View Project:
-👉 https://github.com/BasilKarezin/Bankruptcy Status Monitoring System
+📂 [View Project](./Bankruptcy Status Monitoring System)
 
 Automated search and matching using multiple identifiers (INN, full name, SNILS)
 Processing and parsing external JSON responses
